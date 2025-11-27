@@ -1,0 +1,101 @@
+from sqlalchemy import Column, Integer, String, create_engine
+from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import sessionmaker
+from database.connector import connect_with_connector
+import os
+
+# Create the base class for our models
+Base = declarative_base()
+
+
+class Contact(Base):
+    """Contact model for SQLAlchemy"""
+    __tablename__ = 'contacts'
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    name = Column(String(100), nullable=False)
+    address = Column(String(500), nullable=False)
+
+    def __repr__(self):
+        return f"<Contact(id={self.id}, name='{self.name}', address='{self.address}')>"
+
+    def to_dict(self):
+        """Convert contact to dictionary for easy template rendering"""
+        return {
+            'id': self.id,
+            'name': self.name,
+            'address': self.address
+        }
+
+# Database setup
+
+
+def get_engine():
+    """Get database engine - uses Cloud SQL in production, SQLite for development"""
+    if all(key in os.environ for key in [
+        'CONTACTS_INSTANCE_CONNECTION_NAME',
+        'CONTACTS_DB_USER',
+        'CONTACTS_DB_PASS',
+        'CONTACTS_DB_NAME'
+    ]):
+        # Production: Use Google Cloud SQL
+        print("Using Google Cloud SQL database")
+        return connect_with_connector()
+    else:
+        # Development: Use SQLite
+        print("Using SQLite database for development")
+        return create_engine('sqlite:///contacts.db', echo=True)
+
+
+# Create engine and session factory
+engine = get_engine()
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+
+
+def get_db_session():
+    """Get database session"""
+    session = SessionLocal()
+    try:
+        return session
+    except Exception as e:
+        session.close()
+        raise e
+
+
+def init_db():
+    """Initialize database tables"""
+    Base.metadata.create_all(bind=engine)
+    print("Database tables created successfully")
+
+
+def seed_database():
+    """Add sample data if database is empty"""
+    session = get_db_session()
+    try:
+        # Check if contacts already exist
+        contact_count = session.query(Contact).count()
+
+        if contact_count == 0:
+            print("Seeding database with sample contacts...")
+            sample_contacts = [
+                Contact(name="John Doe",
+                        address="123 Main Street, New York, NY 10001"),
+                Contact(name="Jane Smith",
+                        address="456 Oak Avenue, Los Angeles, CA 90210"),
+                Contact(name="Mike Johnson",
+                        address="789 Pine Road, Chicago, IL 60601")
+            ]
+
+            for contact in sample_contacts:
+                session.add(contact)
+
+            session.commit()
+            print("Sample contacts added successfully")
+        else:
+            print(f"Database already contains {contact_count} contacts")
+
+    except Exception as e:
+        print(f"Error seeding database: {e}")
+        session.rollback()
+    finally:
+        session.close()
