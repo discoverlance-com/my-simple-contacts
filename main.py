@@ -6,9 +6,19 @@ from sqlalchemy.exc import SQLAlchemyError
 app = Flask(__name__)
 app.secret_key = os.environ.get('SECRET_KEY') or 'fallback-dev-key'
 
-# Initialize database on app startup
-init_db()
-# seed_database()
+# Initialize database on app startup with error handling
+try:
+    init_db()
+    print("Database initialization successful")
+except Exception as e:
+    print(f"Warning: Database initialization failed: {e}")
+    print("App will continue to run, but database operations may fail")
+
+# Optionally seed database (commented out to prevent issues in production)
+# try:
+#     seed_database()
+# except Exception as e:
+#     print(f"Warning: Database seeding failed: {e}")
 
 
 def validate_contact(name, address):
@@ -40,7 +50,12 @@ def homepage():
             contacts_data = [contact.to_dict() for contact in contacts]
             return render_template('homepage.html', contacts=contacts_data)
     except SQLAlchemyError as e:
+        print(f"Database error in homepage: {str(e)}")
         flash(f'Database error: {str(e)}', 'error')
+        return render_template('homepage.html', contacts=[])
+    except Exception as e:
+        print(f"Unexpected error in homepage: {str(e)}")
+        flash('An unexpected error occurred. Please try again.', 'error')
         return render_template('homepage.html', contacts=[])
 
 
