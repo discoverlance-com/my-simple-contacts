@@ -2,4 +2,3 @@ flask~=3.1.2
 Sqlalchemy>=2.0.0
 cloud-sql-python-connector~=1.18.5
 pymysql~=1.1.2
-# MDHa{_O3+ugP.De4 1UQqearQilBNW9pniYRGIrY1B7zJnRBH7ZqysslCAE4
