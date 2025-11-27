@@ -15,8 +15,8 @@ def get_connector():
         ip_type = IPTypes.PRIVATE if os.environ.get(
             "PRIVATE_IP") else IPTypes.PUBLIC
         _connector = Connector(ip_type=ip_type, refresh_strategy="LAZY")
-        # Register cleanup function
-        atexit.register(cleanup_connector)
+        # Don't register cleanup for Cloud Run - let the platform handle it
+        # atexit.register(cleanup_connector)
     return _connector
 
 
@@ -26,8 +26,11 @@ def cleanup_connector():
     if _connector:
         try:
             _connector.close()
+            print("Connector closed successfully")
         except Exception as e:
             print(f"Error closing connector: {e}")
+            # Ignore the error and continue shutdown
+            pass
         finally:
             _connector = None
 
