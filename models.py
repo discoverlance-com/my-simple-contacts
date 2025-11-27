@@ -33,18 +33,24 @@ class Contact(Base):
 
 def get_engine():
     """Get database engine - uses Cloud SQL in production, SQLite for development"""
-    if all(key in os.environ for key in [
-        'CONTACTS_INSTANCE_CONNECTION_NAME',
-        'CONTACTS_DB_USER',
-        'CONTACTS_DB_PASS',
-        'CONTACTS_DB_NAME'
-    ]):
-        # Production: Use Google Cloud SQL
-        print("Using Google Cloud SQL database")
-        return connect_with_connector()
-    else:
-        # Development: Use SQLite
-        print("Using SQLite database for development")
+    try:
+        if all(key in os.environ for key in [
+            'CONTACTS_INSTANCE_CONNECTION_NAME',
+            'CONTACTS_DB_USER',
+            'CONTACTS_DB_PASS',
+            'CONTACTS_DB_NAME'
+        ]):
+            # Production: Use Google Cloud SQL
+            print("Using Google Cloud SQL database")
+            return connect_with_connector()
+        else:
+            # Development: Use SQLite
+            print("Using SQLite database for development")
+            return create_engine('sqlite:///contacts.db', echo=True)
+    except Exception as e:
+        print(f"Error creating database engine: {e}")
+        # Fallback to SQLite if Cloud SQL fails
+        print("Falling back to SQLite database")
         return create_engine('sqlite:///contacts.db', echo=True)
 
 

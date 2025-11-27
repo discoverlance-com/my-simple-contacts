@@ -1,5 +1,15 @@
 # Simple Contacts
 
+> **⚠️ IMPORTANT NOTICE: AI-GENERATED PROJECT**
+>
+> **This project was created with AI assistance and is intended for educational and demonstration purposes. Before using in production or any critical environment, please:**
+>
+> - **Thoroughly review and validate all code**
+> - **Conduct comprehensive security testing**
+> - **Verify database configurations and connection handling**
+> - **Test all functionality in your specific environment**
+> - **Consider this a starting point, not a production-ready solution**
+
 A modern Flask web application for managing personal contacts with database persistence and production-ready deployment options.
 
 ## 🌟 Features
@@ -10,15 +20,20 @@ A modern Flask web application for managing personal contacts with database pers
 - **Responsive Design**: Clean, mobile-friendly interface
 - **Production Ready**: Docker support with Gunicorn WSGI server
 - **Environment Flexibility**: Automatic development/production database detection
+- **Comprehensive Testing**: Full test suite with coverage reporting
+- **Session Management**: Robust database connection handling
 
 ## 📁 Project Structure
 
 ```
 my-simple-contacts/
+├── pyproject.toml            # Project configuration and dependencies
 ├── main.py                    # Main Flask application
 ├── models.py                  # SQLAlchemy models and database setup
-├── requirements.txt           # Python dependencies
-├── Dockerfile                 # Production container configuration
+├── requirements.txt           # Production dependencies (legacy)
+├── requirements-dev.txt       # Development dependencies (legacy)
+├── run_tests.py              # Test runner script
+├── Dockerfile                # Production container configuration
 ├── .dockerignore             # Docker build exclusions
 ├── .gitignore                # Git exclusions
 ├── database/
@@ -26,6 +41,11 @@ my-simple-contacts/
 ├── templates/
 │   ├── homepage.html         # Main contact listing page
 │   └── create_contact.html   # Contact creation form
+├── tests/
+│   ├── conftest.py          # Test configuration and fixtures
+│   ├── test_routes.py       # Flask route tests
+│   ├── test_models.py       # Database model tests
+│   └── test_integration.py  # End-to-end integration tests
 └── contacts.db              # SQLite database (development only)
 ```
 
@@ -34,7 +54,7 @@ my-simple-contacts/
 ### Prerequisites
 
 - Python 3.11+
-- pip or uv package manager
+- [uv](https://docs.astral.sh/uv/) (recommended) or pip package manager
 
 ### Local Development
 
@@ -47,21 +67,36 @@ my-simple-contacts/
 
 2. **Install dependencies**
 
+   **Using uv (recommended):**
+
    ```bash
-   # Using pip
+   # Install production dependencies
+   uv sync
+
+   # Install with development dependencies
+   uv sync --extra dev
+   ```
+
+   **Using pip:**
+
+   ````bash
+   # Production dependencies
    pip install -r requirements.txt
 
-   # Using uv (recommended)
-   uv pip install -r requirements.txt
-   ```
-
-3. **Run the application**
+   # Development dependencies
+   pip install -r requirements-dev.txt
+   ```3. **Run the application**
 
    ```bash
-   python main.py
-   ```
+   # Using uv
+   uv run python main.py
 
-4. **Access the application**
+   # Using python directly
+   python main.py
+   ````
+
+3. **Access the application**
+
    Open your browser and navigate to `http://localhost:8000`
 
 ### First Run
@@ -69,6 +104,27 @@ my-simple-contacts/
 - The application will automatically create a SQLite database (`contacts.db`)
 - Sample contacts will be seeded for demonstration
 - All data is persisted between runs
+
+## ⚙️ Project Configuration
+
+This project uses modern Python packaging with `pyproject.toml`:
+
+- **Dependencies**: Managed through `pyproject.toml` with optional dev dependencies
+- **Testing**: Configured with pytest settings and coverage
+- **uv support**: Optimized for the uv package manager
+- **Legacy support**: Still supports pip with requirements.txt files
+
+### Development Dependencies
+
+The project includes optional development dependencies defined in `pyproject.toml`:
+
+```toml
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0.0",
+    "pytest-cov>=4.0.0"
+]
+```
 
 ## 🗄️ Database Configuration
 
@@ -99,6 +155,44 @@ export CONTACTS_DB_NAME=\"your-database\"
 | GET    | `/create-contact`      | Contact creation form      |
 | POST   | `/create-contact`      | Submit new contact         |
 | POST   | `/delete-contact/<id>` | Delete specific contact    |
+
+## 🧪 Testing
+
+The application includes a comprehensive test suite covering routes, models, and integration scenarios.
+
+### Running Tests
+
+````bash
+# Using uv (recommended)
+uv run python run_tests.py --coverage
+uv run python run_tests.py --quick
+uv run pytest tests/ -v
+
+# Using python directly
+python run_tests.py --coverage
+python run_tests.py --quick
+python -m pytest tests/ -v
+
+# Run specific test categories
+uv run pytest tests/test_routes.py      # Route tests
+uv run pytest tests/test_models.py      # Model tests
+uv run pytest tests/test_integration.py # Integration tests
+```### Test Coverage
+
+- **Routes**: HTTP endpoints, form validation, error handling
+- **Models**: Database operations, session management, CRUD operations
+- **Integration**: End-to-end scenarios, database initialization
+- **Coverage**: Automated reporting with pytest-cov
+
+### Test Dependencies
+
+```bash
+# Using uv with optional dev dependencies
+uv sync --extra dev
+
+# Using pip (legacy)
+pip install -r requirements-dev.txt
+````
 
 ## 🛠️ Development
 
@@ -282,12 +376,21 @@ app.run(debug=True, port=8000)
 
 ## 📦 Dependencies
 
+### Production Dependencies
+
 | Package                    | Version | Purpose                       |
 | -------------------------- | ------- | ----------------------------- |
 | flask                      | ~3.1.2  | Web framework                 |
 | sqlalchemy                 | >=2.0.0 | Database ORM                  |
 | cloud-sql-python-connector | ~1.18.5 | Google Cloud SQL connectivity |
 | pymysql                    | ~1.1.2  | MySQL database driver         |
+
+### Development Dependencies
+
+| Package    | Version | Purpose                 |
+| ---------- | ------- | ----------------------- |
+| pytest     | >=7.0.0 | Testing framework       |
+| pytest-cov | >=4.0.0 | Test coverage reporting |
 
 ## 🤝 Contributing
 

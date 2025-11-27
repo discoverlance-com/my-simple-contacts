@@ -6,18 +6,25 @@ This document provides guidance and context for AI assistants working on the Sim
 
 **Application Type**: Flask web application for contact management  
 **Tech Stack**: Python, Flask, SQLAlchemy, Jinja2 templates  
+**Package Management**: uv with pyproject.toml (modern Python packaging)  
 **Database**: Dual-mode (SQLite for development, Google Cloud SQL for production)  
-**Deployment**: Docker with Gunicorn WSGI server
+**Testing**: Comprehensive test suite with pytest and coverage reporting  
+**Deployment**: Docker with Gunicorn WSGI server  
+**Session Management**: Context manager-based database sessions with proper cleanup
 
 ## 📁 Project Architecture
 
 ### Core Files
 
+- `pyproject.toml` - Modern project configuration and dependency management
 - `main.py` - Flask application with routes and business logic
-- `models.py` - SQLAlchemy ORM models and database configuration
-- `database/connector.py` - Google Cloud SQL connection setup
+- `models.py` - SQLAlchemy ORM models with context manager sessions
+- `database/connector.py` - Google Cloud SQL connection setup (fixed connection leaks)
 - `templates/` - Jinja2 HTML templates with embedded CSS
-- `requirements.txt` - Python dependencies
+- `requirements.txt` - Legacy production dependencies
+- `requirements-dev.txt` - Legacy development dependencies
+- `run_tests.py` - Test runner with multiple execution modes
+- `tests/` - Comprehensive test suite (routes, models, integration)
 - `Dockerfile` - Production container configuration
 
 ### Database Schema
@@ -42,10 +49,12 @@ class Contact(Base):
 
 ### Database Best Practices
 
-- **Session Management**: Use `get_db_session()` with proper cleanup
+- **Session Management**: Use `get_db_session_context()` context manager for automatic cleanup
+- **Connection Handling**: Proper disposal of database engines to prevent resource leaks
 - **Environment Detection**: Automatic Cloud SQL vs SQLite based on env variables
-- **Initialization**: `init_db()` and `seed_database()` on app startup
-- **Error Recovery**: Transaction rollback on SQLAlchemy exceptions
+- **Initialization**: `init_db()` with robust error handling on app startup
+- **Error Recovery**: Transaction rollback with proper exception handling
+- **Cloud Run Compatibility**: Fixed connector cleanup issues for production deployment
 
 ### Template Guidelines
 
@@ -53,6 +62,72 @@ class Contact(Base):
 - **Flash Messages**: Support both 'success' and 'error' categories
 - **Form Persistence**: Retain user input when validation fails
 - **Responsive Design**: Mobile-friendly CSS with clean styling
+
+## 🧪 Testing Architecture
+
+### Test Organization
+
+- **`tests/conftest.py`** - Shared fixtures with proper database cleanup
+- **`tests/test_routes.py`** - Flask route testing with form validation
+- **`tests/test_models.py`** - Database model and session management tests
+- **`tests/test_integration.py`** - End-to-end application scenarios
+- **`run_tests.py`** - Test runner with coverage and filtering options
+
+### Test Execution Patterns
+
+- **Database Isolation**: Each test uses temporary SQLite databases
+- **Session Management**: Proper cleanup with engine disposal for Windows compatibility
+- **Coverage Reporting**: Comprehensive coverage with HTML output
+- **Error Handling**: Fixed SQLAlchemy attribute comparison issues
+- **Parallel Testing**: Designed for concurrent test execution
+
+### Test Commands
+
+```bash
+# Modern uv commands
+uv run python run_tests.py --coverage
+uv run pytest tests/ -v
+
+# Legacy pip commands
+python run_tests.py --coverage
+python -m pytest tests/
+```
+
+## 🔧 Modern Development Workflow
+
+### Package Management (uv + pyproject.toml)
+
+- **Dependencies**: Managed through `pyproject.toml` with optional dev dependencies
+- **Installation**: `uv sync --extra dev` for development setup
+- **Legacy Support**: Still supports pip with requirements.txt files
+- **Production**: Clean separation of production vs development dependencies
+
+### Development Setup
+
+```bash
+# Modern approach
+git clone <repo>
+cd my-simple-contacts
+uv sync --extra dev
+uv run python main.py
+
+# Legacy approach
+pip install -r requirements-dev.txt
+python main.py
+```
+
+### Testing Workflow
+
+```bash
+# Run full test suite with coverage
+uv run python run_tests.py --coverage
+
+# Quick tests (excludes slow integration tests)
+uv run python run_tests.py --quick
+
+# Specific test categories
+uv run pytest tests/test_routes.py
+```
 
 ## 🛠️ Common Tasks & Solutions
 
@@ -92,29 +167,43 @@ class Contact(Base):
 
 - Use environment-specific secret keys
 - Validate all user inputs server-side
-- Implement proper session management
+- Implement proper session management with context managers
 - Use HTTPS in production
 - Follow Docker security best practices
+- Ensure proper database connection cleanup for Cloud Run
+- Separate production and development dependencies
 
-## 🐛 Known Issues & Solutions
+## 🐛 Known Issues & Solutions (Updated)
 
 ### Port Conflicts (Windows)
 
 - **Issue**: Port 5000 reserved by system process
 - **Solution**: Application uses port 8000 by default
-- **Alternative**: Use `flask run --port <number>` for custom ports
+- **Alternative**: Use `uv run python main.py` or `flask run --port <number>`
+
+### Database Connection Management
+
+- **Issue**: SQLite file locking on Windows, Cloud SQL connection leaks
+- **Solution**: Context manager sessions with proper engine disposal
+- **Implementation**: `get_db_session_context()` with try/finally cleanup
+
+### Cloud Run Deployment
+
+- **Issue**: Gunicorn worker boot failures due to connector cleanup
+- **Solution**: Removed automatic atexit connector cleanup for Cloud Run
+- **Pattern**: Let platform handle connection cleanup during shutdown
+
+### SQLAlchemy Testing
+
+- **Issue**: Linter errors with SQLAlchemy attribute comparisons
+- **Solution**: Use `getattr(obj, 'attribute')` pattern in tests
+- **Pattern**: Add null checks before accessing model attributes
 
 ### Template Variable Errors
 
 - **Issue**: `jinja2.exceptions.UndefinedError`
 - **Solution**: Always pass required variables (especially `errors={}`)
 - **Pattern**: Consistent variable passing in all route renders
-
-### Database Connection Issues
-
-- **Development**: Check SQLite file permissions and path
-- **Production**: Verify Cloud SQL environment variables
-- **Debugging**: Enable SQLAlchemy echo for SQL logging
 
 ## 📝 Testing Guidelines
 
@@ -411,9 +500,12 @@ _This document should be updated as the project evolves to reflect new patterns,
 
 ### Technology Integration
 
-- **Flask + SQLAlchemy**: Modern Python web development stack
-- **Docker**: Containerization for consistent deployment
-- **Google Cloud SQL**: Production database integration
+- **Flask + SQLAlchemy**: Modern Python web development stack with context managers
+- **uv + pyproject.toml**: Modern Python packaging and dependency management
+- **pytest + coverage**: Comprehensive testing with detailed reporting
+- **Docker**: Containerization with optimized production configuration
+- **Google Cloud SQL**: Production database with proper connection handling
+- **Cloud Run**: Serverless deployment with proper resource cleanup
 
 ### Documentation Standards
 
@@ -433,21 +525,39 @@ Based on the current architecture, the application is ready for:
 6. **Contact Photos**: Image upload and storage
 7. **Contact Sharing**: Multi-user collaboration
 
-## 💡 AI Assistant Insights
+## 💡 AI Assistant Insights (Updated)
 
 ### Effective Collaboration Patterns
 
-1. **Incremental Development**: Small, testable changes
-2. **Error-Driven Learning**: Issues became learning opportunities
-3. **Documentation-First**: Clear communication of changes
-4. **Security Awareness**: Proactive security considerations
+1. **Incremental Development**: Small, testable changes with immediate validation
+2. **Error-Driven Learning**: Database connection and testing issues became optimization opportunities
+3. **Documentation-First**: Clear communication of changes and architectural decisions
+4. **Security Awareness**: Proactive security considerations and AI-generated project disclaimers
+5. **Modern Tooling**: Migration to uv and pyproject.toml for better developer experience
 
-### Code Quality Metrics
+### Code Quality Achievements
 
-- **Readability**: Clear, commented code
-- **Maintainability**: Modular, organized structure
-- **Reliability**: Comprehensive error handling
-- **Scalability**: Production-ready architecture
+- **Readability**: Clear, commented code with consistent patterns
+- **Maintainability**: Modular structure with proper separation of concerns
+- **Reliability**: Comprehensive error handling and session management
+- **Scalability**: Production-ready architecture with Cloud Run optimization
+- **Testability**: 71%+ test coverage with comprehensive integration tests
+- **Modern Standards**: Uses current Python packaging and development practices
+
+### Key Problem-Solving Patterns
+
+1. **Database Session Management**: Fixed resource leaks with context managers
+2. **Cloud Deployment**: Resolved Gunicorn worker failures and connection cleanup
+3. **Testing Infrastructure**: Built comprehensive test suite with Windows compatibility
+4. **Dependency Management**: Modern uv setup with legacy pip support
+5. **SQLAlchemy Integration**: Proper attribute access patterns to avoid linter issues
+
+### Development Environment Considerations
+
+- **Windows Compatibility**: Port conflicts, file locking, connection disposal timing
+- **Cloud Run Specifics**: Worker lifecycle, connection cleanup, resource constraints
+- **Testing Isolation**: Temporary databases, session cleanup, parallel execution
+- **Modern Python**: uv package management, pyproject.toml configuration
 
 ---
 

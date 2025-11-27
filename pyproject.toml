@@ -1,0 +1,100 @@
+[project]
+name = "simple-contacts"
+version = "1.0.0"
+description = "A Flask web application for managing personal contacts"
+readme = "README.md"
+authors = [
+    {name = "Lance Armah-Abraham", email = "lanarmah@gmail.com"}
+]
+license = "MIT"
+requires-python = ">=3.11"
+dependencies = [
+    "flask~=3.1.2",
+    "sqlalchemy>=2.0.0",
+    "cloud-sql-python-connector~=1.18.5",
+    "pymysql~=1.1.2"
+]
+keywords = ["flask", "contacts", "web-app", "sqlalchemy"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.13",
+    "Framework :: Flask",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0.0",
+    "pytest-cov>=4.0.0"
+]
+
+[project.urls]
+Homepage = "https://github.com/discoverlance-com/my-simple-contacts"
+Repository = "https://github.com/discoverlance-com/my-simple-contacts.git"
+Issues = "https://github.com/discoverlance-com/my-simple-contacts/issues"
+
+[tool.uv]
+dev-dependencies = [
+    "pytest>=7.0.0",
+    "pytest-cov>=4.0.0"
+]
+
+[tool.setuptools]
+packages = []
+py-modules = []
+
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = [
+    "-v",
+    "--tb=short",
+    "--strict-markers",
+    "--disable-warnings",
+    "--cov=.",
+    "--cov-report=term-missing",
+    "--cov-report=html",
+    "--cov-config=pyproject.toml"
+]
+markers = [
+    "slow: marks tests as slow (deselect with '-m \"not slow\"')",
+    "integration: marks tests as integration tests",
+    "unit: marks tests as unit tests"
+]
+filterwarnings = [
+    "ignore::DeprecationWarning",
+    "ignore::PendingDeprecationWarning"
+]
+
+[tool.coverage.run]
+source = ["."]
+omit = [
+    "tests/*",
+    "venv/*",
+    ".venv/*",
+    "htmlcov/*",
+    "run_tests.py",
+    "test_db.py"
+]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "if self.debug:",
+    "if settings.DEBUG",
+    "raise AssertionError",
+    "raise NotImplementedError",
+    "if 0:",
+    "if __name__ == .__main__.:"
+]
