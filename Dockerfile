@@ -35,5 +35,5 @@ USER appuser
 # Expose port
 EXPOSE 8000
 
-# Run the application with Gunicorn
-CMD ["gunicorn", "--bind", "0.0.0.0:8000", "--workers", "4", "--worker-class", "sync", "--timeout", "120", "main:app"]
+# Run the application with Gunicorn optimized for Cloud SQL
+CMD ["gunicorn", "--bind", "0.0.0.0:8000", "--workers", "2", "--worker-class", "sync", "--timeout", "120", "--max-requests", "1000", "--max-requests-jitter", "100", "--preload", "main:app"]

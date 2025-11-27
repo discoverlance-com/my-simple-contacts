@@ -1,6 +1,7 @@
 from sqlalchemy import Column, Integer, String, create_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
+from contextlib import contextmanager
 from database.connector import connect_with_connector
 import os
 
@@ -62,6 +63,20 @@ def get_db_session():
         raise e
 
 
+@contextmanager
+def get_db_session_context():
+    """Get database session with proper context management (recommended)"""
+    session = SessionLocal()
+    try:
+        yield session
+        session.commit()
+    except Exception:
+        session.rollback()
+        raise
+    finally:
+        session.close()
+
+
 def init_db():
     """Initialize database tables"""
     Base.metadata.create_all(bind=engine)
@@ -70,32 +85,29 @@ def init_db():
 
 def seed_database():
     """Add sample data if database is empty"""
-    session = get_db_session()
     try:
-        # Check if contacts already exist
-        contact_count = session.query(Contact).count()
+        with get_db_session_context() as session:
+            # Check if contacts already exist
+            contact_count = session.query(Contact).count()
 
-        if contact_count == 0:
-            print("Seeding database with sample contacts...")
-            sample_contacts = [
-                Contact(name="John Doe",
-                        address="123 Main Street, New York, NY 10001"),
-                Contact(name="Jane Smith",
-                        address="456 Oak Avenue, Los Angeles, CA 90210"),
-                Contact(name="Mike Johnson",
-                        address="789 Pine Road, Chicago, IL 60601")
-            ]
+            if contact_count == 0:
+                print("Seeding database with sample contacts...")
+                sample_contacts = [
+                    Contact(name="John Doe",
+                            address="123 Main Street, New York, NY 10001"),
+                    Contact(name="Jane Smith",
+                            address="456 Oak Avenue, Los Angeles, CA 90210"),
+                    Contact(name="Mike Johnson",
+                            address="789 Pine Road, Chicago, IL 60601")
+                ]
 
-            for contact in sample_contacts:
-                session.add(contact)
+                for contact in sample_contacts:
+                    session.add(contact)
 
-            session.commit()
-            print("Sample contacts added successfully")
-        else:
-            print(f"Database already contains {contact_count} contacts")
+                # Context manager handles commit automatically
+                print("Sample contacts added successfully")
+            else:
+                print(f"Database already contains {contact_count} contacts")
 
     except Exception as e:
         print(f"Error seeding database: {e}")
-        session.rollback()
-    finally:
-        session.close()
