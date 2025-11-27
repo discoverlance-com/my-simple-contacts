@@ -83,11 +83,12 @@ def create_contact():
                                    name=name,
                                    address=address)
 
-        # Save to database
+        # Save to database with improved error handling
         try:
             with get_db_session_context() as session:
                 new_contact = Contact(name=name, address=address)
                 session.add(new_contact)
+                session.flush()  # Flush to get the ID but don't commit yet
                 # Context manager handles commit automatically
 
                 print(f"New contact saved to database:")
@@ -96,8 +97,18 @@ def create_contact():
                 flash('Contact created successfully!', 'success')
                 return redirect(url_for('homepage'))
 
-        except SQLAlchemyError as e:
-            flash(f'Error saving contact: {str(e)}', 'error')
+        except Exception as e:
+            error_msg = str(e).lower()
+            print(f"Database error in create_contact: {e}")
+
+            # Provide user-friendly error messages
+            if 'timeout' in error_msg or 'connection' in error_msg:
+                flash('Database connection timeout. Please try again.', 'error')
+            elif 'invalidatepool' in error_msg:
+                flash(
+                    'Database connection issue. Please refresh and try again.', 'error')
+            else:
+                flash('Error saving contact. Please try again.', 'error')
             return render_template('create_contact.html',
                                    errors={},
                                    name=name,

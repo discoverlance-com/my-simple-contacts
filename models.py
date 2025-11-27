@@ -71,50 +71,78 @@ def get_db_session():
 
 @contextmanager
 def get_db_session_context():
-    """Get database session with proper context management and retry logic"""
+    """Get database session with robust error handling for Cloud SQL"""
     global engine, SessionLocal
 
     session = None
-    max_retries = 3
+    max_retries = 2
     retry_count = 0
 
     while retry_count < max_retries:
         try:
             session = SessionLocal()
-            # Test the connection with a simple query to catch stale connections
-            session.execute(text("SELECT 1"))
-            break
+            # Only test on retries, not first attempt to avoid triggering InvalidatePoolError
+            if retry_count > 0:
+                try:
+                    # Simple connection test
+                    session.execute(text("SELECT 1"))
+                except Exception as test_error:
+                    print(f"Connection test failed: {test_error}")
+                    raise test_error
+
+            break  # Success - exit retry loop
+
         except Exception as e:
+            error_msg = str(e).lower()
             if session is not None:
-                session.close()
+                try:
+                    session.close()
+                except:
+                    pass
                 session = None
+
             retry_count += 1
+            print(f"Database session attempt {retry_count} failed: {e}")
+
             if retry_count >= max_retries:
                 print(
-                    f"Database connection failed after {max_retries} retries: {e}")
+                    f"Database connection failed after {max_retries} attempts")
                 raise
-            print(
-                f"Database connection attempt {retry_count} failed, retrying...")
-            # Reset the engine to clear stale connections
-            if engine:
-                engine.dispose()
-                engine = get_engine()
-                SessionLocal = sessionmaker(
-                    autocommit=False, autoflush=False, bind=engine)
+
+            # Handle pool invalidation
+            if 'invalidatepool' in error_msg or 'timeout' in error_msg:
+                print("Pool invalidation detected, refreshing engine...")
+                try:
+                    if engine:
+                        engine.dispose()
+                    import time
+                    time.sleep(0.5)
+                    engine = get_engine()
+                    SessionLocal = sessionmaker(
+                        autocommit=False, autoflush=False, bind=engine)
+                except Exception as refresh_error:
+                    print(f"Engine refresh failed: {refresh_error}")
 
     if session is None:
-        raise Exception("Failed to create database session")
+        raise Exception("Failed to create database session after retries")
 
     try:
         yield session
         session.commit()
-    except Exception:
+    except Exception as e:
+        print(f"Transaction error: {e}")
         if session is not None:
-            session.rollback()
+            try:
+                session.rollback()
+            except:
+                pass
         raise
     finally:
         if session is not None:
-            session.close()
+            try:
+                session.close()
+            except:
+                pass
 
 
 def init_db():

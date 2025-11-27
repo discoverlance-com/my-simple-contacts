@@ -9,14 +9,17 @@ _connector = None
 
 
 def get_connector():
-    """Get or create global connector instance"""
+    """Get or create global connector instance with proper cleanup"""
     global _connector
     if _connector is None:
         ip_type = IPTypes.PRIVATE if os.environ.get(
             "PRIVATE_IP") else IPTypes.PUBLIC
-        _connector = Connector(ip_type=ip_type, refresh_strategy="LAZY")
-        # Don't register cleanup for Cloud Run - let the platform handle it
-        # atexit.register(cleanup_connector)
+        _connector = Connector(
+            ip_type=ip_type,
+            refresh_strategy="LAZY"
+        )
+        # Register cleanup for proper session management
+        atexit.register(cleanup_connector)
     return _connector
 
 
@@ -57,21 +60,24 @@ def connect_with_connector() -> sqlalchemy.engine.base.Engine:
         )
         return conn
 
-    # Create engine with robust connection pool settings for Cloud Run
+    # Create engine optimized for Cloud Run with aggressive connection management
     pool = sqlalchemy.create_engine(
         "mysql+pymysql://",
         creator=getconn,
-        pool_size=3,  # Smaller pool for Cloud Run
-        max_overflow=1,  # Reduced overflow
-        pool_pre_ping=True,  # Test connections before use
-        # Recycle connections every 10 minutes (shorter than Cloud SQL idle timeout)
-        pool_recycle=600,
+        pool_size=2,  # Very small pool for Cloud Run
+        max_overflow=0,  # No overflow to limit connections
+        pool_pre_ping=False,  # Disable pre-ping to avoid InvalidatePoolError
+        pool_recycle=300,  # More aggressive recycle (5 minutes)
         pool_reset_on_return='commit',  # Clean state on return
+        pool_timeout=10,  # Short timeout for getting connections
         connect_args={
-            "connect_timeout": 30,  # Shorter connection timeout
-            "read_timeout": 30,
-            "write_timeout": 30,
-            "autocommit": True,  # Enable autocommit for connection health
-        }
+            "connect_timeout": 20,  # Reduced connection timeout
+            "read_timeout": 20,
+            "write_timeout": 20,
+            "autocommit": False,  # Disable autocommit for better control
+        },
+        # Additional engine options for stability
+        echo=False,  # Disable SQL logging in production
+        future=True  # Use SQLAlchemy 2.0 style
     )
     return pool
