@@ -1,8 +1,8 @@
 from flask import Flask, render_template, request, redirect, url_for, flash
-import re
+import os
 
 app = Flask(__name__)
-app.secret_key = 'your-secret-key-change-in-production'
+app.secret_key = os.environ.get('SECRET_KEY') or 'fallback-dev-key'
 
 # Sample contacts data
 sample_contacts = [
