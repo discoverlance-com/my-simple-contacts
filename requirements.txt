@@ -1,0 +1,2 @@
+flask~=3.1.2
+Sqlalchemy>=2.0.0

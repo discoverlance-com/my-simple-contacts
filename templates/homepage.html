@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Simple Contacts</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        max-width: 800px;
+        margin: 0 auto;
+        padding: 20px;
+        background-color: #f5f5f5;
+      }
+
+      .container {
+        background-color: white;
+        padding: 30px;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      }
+
+      h1 {
+        color: #333;
+        text-align: center;
+        margin-bottom: 30px;
+      }
+
+      .create-btn {
+        background-color: #007bff;
+        color: white;
+        padding: 10px 20px;
+        text-decoration: none;
+        border-radius: 4px;
+        display: inline-block;
+        margin-bottom: 30px;
+      }
+
+      .create-btn:hover {
+        background-color: #0056b3;
+      }
+
+      .contact-list {
+        list-style: none;
+        padding: 0;
+      }
+
+      .contact-item {
+        background-color: #f8f9fa;
+        margin-bottom: 15px;
+        padding: 20px;
+        border-radius: 6px;
+        border: 1px solid #dee2e6;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+
+      .contact-info h3 {
+        margin: 0 0 5px 0;
+        color: #333;
+      }
+
+      .contact-info p {
+        margin: 0;
+        color: #666;
+      }
+
+      .delete-btn {
+        background-color: #dc3545;
+        color: white;
+        border: none;
+        padding: 8px 16px;
+        border-radius: 4px;
+        cursor: pointer;
+      }
+
+      .delete-btn:hover {
+        background-color: #c82333;
+      }
+
+      .flash-messages {
+        margin-bottom: 20px;
+      }
+
+      .alert {
+        padding: 15px;
+        margin-bottom: 20px;
+        border-radius: 4px;
+      }
+
+      .alert-success {
+        color: #155724;
+        background-color: #d4edda;
+        border: 1px solid #c3e6cb;
+      }
+
+      .no-contacts {
+        text-align: center;
+        color: #666;
+        font-style: italic;
+        padding: 40px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>Simple Contacts</h1>
+
+      <!-- Flash messages -->
+      {% with messages = get_flashed_messages(with_categories=true) %} {% if
+      messages %}
+      <div class="flash-messages">
+        {% for category, message in messages %}
+        <div class="alert alert-{{ category }}">{{ message }}</div>
+        {% endfor %}
+      </div>
+      {% endif %} {% endwith %}
+
+      <!-- Create contact button -->
+      <a href="{{ url_for('create_contact') }}" class="create-btn"
+        >+ Create New Contact</a
+      >
+
+      <!-- Contacts list -->
+      {% if contacts %}
+      <ul class="contact-list">
+        {% for contact in contacts %}
+        <li class="contact-item">
+          <div class="contact-info">
+            <h3>{{ contact.name }}</h3>
+            <p>{{ contact.address }}</p>
+          </div>
+          <form
+            method="POST"
+            action="{{ url_for('delete_contact', contact_id=contact.id) }}"
+            style="display: inline"
+          >
+            <button
+              type="submit"
+              class="delete-btn"
+              onclick="return confirm('Are you sure you want to delete {{ contact.name }}?')"
+            >
+              Delete
+            </button>
+          </form>
+        </li>
+        {% endfor %}
+      </ul>
+      {% else %}
+      <div class="no-contacts">
+        <p>No contacts found. Create your first contact!</p>
+      </div>
+      {% endif %}
+    </div>
+  </body>
+</html>
