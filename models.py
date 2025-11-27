@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, create_engine
+from sqlalchemy import Column, Integer, String, create_engine, text
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 from contextlib import contextmanager
@@ -71,16 +71,50 @@ def get_db_session():
 
 @contextmanager
 def get_db_session_context():
-    """Get database session with proper context management (recommended)"""
-    session = SessionLocal()
+    """Get database session with proper context management and retry logic"""
+    global engine, SessionLocal
+
+    session = None
+    max_retries = 3
+    retry_count = 0
+
+    while retry_count < max_retries:
+        try:
+            session = SessionLocal()
+            # Test the connection with a simple query to catch stale connections
+            session.execute(text("SELECT 1"))
+            break
+        except Exception as e:
+            if session is not None:
+                session.close()
+                session = None
+            retry_count += 1
+            if retry_count >= max_retries:
+                print(
+                    f"Database connection failed after {max_retries} retries: {e}")
+                raise
+            print(
+                f"Database connection attempt {retry_count} failed, retrying...")
+            # Reset the engine to clear stale connections
+            if engine:
+                engine.dispose()
+                engine = get_engine()
+                SessionLocal = sessionmaker(
+                    autocommit=False, autoflush=False, bind=engine)
+
+    if session is None:
+        raise Exception("Failed to create database session")
+
     try:
         yield session
         session.commit()
     except Exception:
-        session.rollback()
+        if session is not None:
+            session.rollback()
         raise
     finally:
-        session.close()
+        if session is not None:
+            session.close()
 
 
 def init_db():

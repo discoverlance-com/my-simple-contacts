@@ -2,6 +2,7 @@ from flask import Flask, render_template, request, redirect, url_for, flash
 import os
 from models import Contact, get_db_session, get_db_session_context, init_db, seed_database
 from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy import text
 
 app = Flask(__name__)
 app.secret_key = os.environ.get('SECRET_KEY') or 'fallback-dev-key'
@@ -51,11 +52,17 @@ def homepage():
             return render_template('homepage.html', contacts=contacts_data)
     except SQLAlchemyError as e:
         print(f"Database error in homepage: {str(e)}")
-        flash(f'Database error: {str(e)}', 'error')
+        # Check if it's a connection timeout or pool invalidation
+        error_str = str(e).lower()
+        if 'invalidatepoolerrror' in error_str or 'timeout' in error_str or 'connection' in error_str:
+            flash(
+                'Database connection timeout. The page will retry automatically.', 'error')
+        else:
+            flash(f'Database error: {str(e)}', 'error')
         return render_template('homepage.html', contacts=[])
     except Exception as e:
         print(f"Unexpected error in homepage: {str(e)}")
-        flash('An unexpected error occurred. Please try again.', 'error')
+        flash('An unexpected error occurred. Please try refreshing the page.', 'error')
         return render_template('homepage.html', contacts=[])
 
 
@@ -126,6 +133,19 @@ def delete_contact(contact_id):
         print(f"Database error during deletion: {e}")
 
     return redirect(url_for('homepage'))
+
+
+@app.route('/health')
+def health_check():
+    """Health check endpoint for Cloud Run"""
+    try:
+        with get_db_session_context() as session:
+            # Simple database connectivity test
+            session.execute(text("SELECT 1"))
+        return {'status': 'healthy', 'database': 'connected'}, 200
+    except Exception as e:
+        print(f"Health check failed: {e}")
+        return {'status': 'unhealthy', 'database': 'disconnected', 'error': str(e)}, 503
 
 
 if __name__ == '__main__':

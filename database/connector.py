@@ -57,18 +57,21 @@ def connect_with_connector() -> sqlalchemy.engine.base.Engine:
         )
         return conn
 
-    # Create engine with proper connection pool settings
+    # Create engine with robust connection pool settings for Cloud Run
     pool = sqlalchemy.create_engine(
         "mysql+pymysql://",
         creator=getconn,
-        pool_size=5,
-        max_overflow=2,
-        pool_pre_ping=True,
-        pool_recycle=1800,  # Recycle connections every 30 minutes
+        pool_size=3,  # Smaller pool for Cloud Run
+        max_overflow=1,  # Reduced overflow
+        pool_pre_ping=True,  # Test connections before use
+        # Recycle connections every 10 minutes (shorter than Cloud SQL idle timeout)
+        pool_recycle=600,
+        pool_reset_on_return='commit',  # Clean state on return
         connect_args={
-            "connect_timeout": 60,
-            "read_timeout": 60,
-            "write_timeout": 60,
+            "connect_timeout": 30,  # Shorter connection timeout
+            "read_timeout": 30,
+            "write_timeout": 30,
+            "autocommit": True,  # Enable autocommit for connection health
         }
     )
     return pool
